@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caça ao Coração</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f7f2f2;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #gameArea {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        #startMessage {
+            font-size: 1.5em;
+            color: #e63946;
+        }
+
+        #startButton {
+            padding: 10px 20px;
+            font-size: 1.5em;
+            background-color: #e63946;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        #timer {
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            font-size: 1.5em;
+            color: #6d6875;
+        }
+
+        #score {
+            position: absolute;
+            top: 50px;
+            left: 20px;
+            font-size: 1.5em;
+            color: #6d6875;
+        }
+
+        #message {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.4em;
+            color: #e63946;
+            text-align: center;
+            display: none; /* Só vai aparecer quando o jogador ganhar */
+            padding: 30px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            max-width: 90vw;
+            max-height: 50vh;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        #jokeMessage {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.4em;
+            color: #e63946;
+            text-align: center;
+            display: none;
+            padding: 30px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            max-width: 90vw;
+            max-height: 50vh;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        #prizeButton, #nextButton {
+            position: absolute;
+            top: 75%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 10px 20px;
+            font-size: 1.5em;
+            background-color: #e63946;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 10px;
+            display: none;
+            width: 60vw;
+            max-width: 300px;
+            z-index: 10;
+        }
+
+        #bigHeart {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 5em;
+            display: none;
+            z-index: 10;
+        }
+
+        .sunflower {
+            position: absolute;
+            font-size: 3em;
+            color: #e63946;
+            display: none;
+            z-index: 5;
+        }
+
+        .heart {
+            position: absolute;
+            font-size: 2em;
+            color: #e63946;
+            cursor: pointer;
+            animation: float 1.5s ease infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0); }
+        }
+
+        @media (max-width: 600px) {
+            #message, #jokeMessage { font-size: 1.2em; padding: 15px; max-height: 50vh; }
+            #prizeButton, #nextButton { font-size: 1.2em; padding: 8px 15px; }
+            #bigHeart { font-size: 4em; }
+            .sunflower, .heart { font-size: 2em; }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameArea">
+        <div id="startScreen">
+            <div id="startMessage">Junte 10 corações para chegar no final. Mas boa sorte, você tem 15 segundos!</div>
+            <button id="startButton">Iniciar Jogo</button>
+        </div>
+        <div id="timer">Tempo: 15</div>
+        <div id="score">Pontos: 0</div>
+        <div id="message">Parabéns! Você ganhou!</div>
+        <button id="prizeButton">Receba seu Presente</button>
+        <button id="nextButton">Próximo Coração</button>
+        <div id="bigHeart">❤️</div>
+        <div id="jokeMessage"></div>
+    </div>
+
+    <script>
+        let score = 0;
+        let timeLeft = 15;
+        let maxScore = 10;
+        let currentMessageIndex = 0;
+        let gameStarted = false;
+        let won = false;  // Para rastrear se o jogador já venceu
+        let timerInterval, heartInterval;
+
+        const messages = [
+            "Por que o químico não conseguia resolver o enigma? Aaaaah esperava uma mensagem bonitinha? calma... Bom...",
+            "Oras... Ele não tinha a solução. kkkkkkkk Parei...",
+            "Eu fiquei pensando em como poderia me redimir... E foi assim que encontrei essa maneira. Quando te falei que estava estudando, na verdade, estava planejando isso aqui. Sei que não ficou perfeito, mas foi algo feito com carinho e de forma rápida, com a esperança de que, no mínimo, pudesse te trazer algo bom. Talvez, um sorriso teu... Da sua nerd...",
+            "Meu amor, minha namorada, minha pessoa... Eu te amo de todas as maneiras possíveis, e eu te quero ao meu lado, hoje e sempre. Nunca me canso de dizer isso, porque quero que fique gravado em seu coração.",
+            "Eu sei que não sou perfeita, erro bastante... Às vezes me afasto e me culpo por isso. Mas não pense que, por estar na minha, deixei de pensar em você. Pelo contrário... Estou aqui, pensando em mil maneiras de te ter por perto. Seja fisicamente ou em pensamento, porque, afinal, você já é dona do meu coração e da minha mente. Às vezes fico chateada com algumas coisas que acontecem, especialmente em casa, onde tudo pode mudar de uma hora pra outra. E, quando isso acontece, simplesmente me sinto sem palavras, sem saber o que dizer... E acabo preferindo me isolar um pouco. Mas eu sei, no fundo, que isso não é justo. Porque agora não sou mais só eu... Somos eu e você. E eu preciso aprender a lidar com isso, porque você merece o melhor de mim, sempre.",
+            "Eu nunca fui romântica, de verdade. Pergunta pro Leandro, ele me conhece bem... Mas com você, tudo fica diferente. Com você, ser 'fofa' é algo que vem naturalmente. Sempre quero fazer algo que te faça feliz, que arranque um sorriso seu, por menor que seja. Acho que é isso que significa amar de verdade, né? Deve ser...",
+            "Eu te conheci no dia 23/08, há apenas 14 dias, e olha onde chegamos. Totalmente entregues uma à outra kkkkk... É louco, né? Mas de um jeito maravilhoso. Eu entrei naquele jogo só pra acompanhar o Leandro, e acabei saindo com, literalmente, o amor da minha vida. (Sempre tive um certo medo de dizer isso.) Mas, com você, tudo é simples. É leve, é sereno. Você me entende, Hanna...",
+            "A forma como a gente conversa, como conseguimos transmitir tudo o que sentimos com tanta intensidade, é simplesmente absurdo. Nossa compatibilidade é surreal. E o mais incrível? Você está perto, é algo totalmente possível, Hanna... É muito louco, eu já disse antes e repito: é louco demais isso tudo.",
+            "Amor, eu quero ser sua parceira em tudo. Quero te apoiar, rir contigo, e estar sempre ao seu lado. Quero ouvir você falar dos seus livros, das suas opiniões, do que te irrita, do que te deixa triste. Quero assistir filmes e séries com você, cozinhar juntas, te convencer a comer mais frutas, caminhar lado a lado, jogar vôlei e compartilhar tanto os erros quanto os acertos. Céus... Quero viver minha vida ao lado da sua, em cada detalhe, em cada momento...",
+            "Eu sei que errei, e esse é um hábito que eu vou mudar. Por você. Por nós. Tem tanta coisa acontecendo, mas vai dar certo. Nós vamos fazer dar certo. É isso que importa, né? Estar juntas e amar. Eu só quero te agradecer por não ter ido embora, por ter ficado. Por compartilhar desse mesmo sentimento comigo. Tenho medo? Com certeza. Mas sei que você também tem, e a diferença é que vamos enfrentar isso juntas... Vai dar certo, não vai?",
+            "Mensagem bônus uhuuu! 🍜🍫👭 Amor, eu te amo mil milhões, até mais que o infinito, ok? E se alguém disser que é exagero? Bom, isso só significa que nunca teve a sorte de viver algo como o que temos. É único, é raro. É isso, meu amor, minha vida, minha mulher, minha menina. Eu amo você!"
+        ];
+
+        const startScreen = document.getElementById('startScreen');
+        const startButton = document.getElementById('startButton');
+        const prizeButton = document.getElementById('prizeButton');
+        const nextButton = document.getElementById('nextButton');
+        const bigHeart = document.getElementById('bigHeart');
+        const jokeMessage = document.getElementById('jokeMessage');
+        const message = document.getElementById('message');
+        const scoreElement = document.getElementById('score');
+        const timerElement = document.getElementById('timer');
+
+        function startGame() {
+            gameStarted = true;
+            won = false; // Reiniciar estado de vitória ao iniciar o jogo novamente
+            scoreElement.innerText = "Pontos: " + score;
+            timerElement.innerText = "Tempo: " + timeLeft;
+            startScreen.style.display = 'none';
+            heartInterval = setInterval(createHeart, 700);
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('heart');
+            heart.innerHTML = "❤️";
+            heart.style.top = Math.random() * (window.innerHeight - 50) + 'px';
+            heart.style.left = Math.random() * (window.innerWidth - 50) + 'px';
+            heart.addEventListener('click', () => {
+                score++;
+                scoreElement.innerText = "Pontos: " + score;
+                heart.remove();
+                if (score >= maxScore) {
+                    endGame(true);
+                }
+            });
+            document.getElementById('gameArea').appendChild(heart);
+            setTimeout(() => heart.remove(), 800);
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            timerElement.innerText = "Tempo: " + timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                clearInterval(heartInterval);
+                if (score < maxScore) {
+                    timerElement.innerText = "Tempo: 0";
+                    showTryAgainButton();
+                }
+            }
+        }
+
+        function showTryAgainButton() {
+            const tryAgainButton = document.createElement('button');
+            tryAgainButton.innerText = "Tentar Novamente";
+            tryAgainButton.style.position = "absolute";
+            tryAgainButton.style.top = "50%";
+            tryAgainButton.style.left = "50%";
+            tryAgainButton.style.transform = "translate(-50%, -50%)";
+            tryAgainButton.style.padding = "10px 20px";
+            tryAgainButton.style.fontSize = "1.5em";
+            tryAgainButton.style.backgroundColor = "#e63946";
+            tryAgainButton.style.color = "white";
+            tryAgainButton.style.border = "none";
+            tryAgainButton.style.cursor = "pointer";
+            tryAgainButton.style.borderRadius = "10px";
+            tryAgainButton.style.zIndex = "10";
+
+            tryAgainButton.addEventListener('click', () => {
+                document.getElementById('gameArea').removeChild(tryAgainButton);
+                timeLeft = 15;
+                startGame();
+            });
+
+            document.getElementById('gameArea').appendChild(tryAgainButton);
+        }
+
+        function endGame(playerWon) {
+            clearInterval(heartInterval);
+            clearInterval(timerInterval);
+            document.querySelectorAll('.heart').forEach(heart => heart.remove());
+            if (playerWon) {
+                won = true;  // O jogador venceu
+                showPrizeButton();
+            }
+        }
+
+        function showPrizeButton() {
+            gameStarted = false;
+            message.style.display = 'block';  // Mostrar a mensagem de vitória
+            prizeButton.style.display = 'block';
+        }
+
+        function startHeartExplosion() {
+            prizeButton.style.display = 'none';
+            bigHeart.style.display = 'block';
+            setTimeout(() => {
+                bigHeart.style.display = 'none';
+                showSunflowers();
+                showJokeMessage();
+            }, 1000);
+        }
+
+        function showSunflowers() {
+            for (let i = 0; i < 100; i++) {  // Gerar 100 girassóis aleatoriamente na tela
+                const sunflower = document.createElement("div");
+                sunflower.classList.add("sunflower");
+                sunflower.innerHTML = "🌻";
+                sunflower.style.top = Math.random() * window.innerHeight + 'px';
+                sunflower.style.left = Math.random() * window.innerWidth + 'px';
+                document.getElementById('gameArea').appendChild(sunflower);
+                sunflower.style.display = 'block';
+            }
+        }
+
+        function showJokeMessage() {
+            message.style.display = 'none';  // Certifique-se de que a mensagem de vitória seja removida
+            jokeMessage.innerText = messages[currentMessageIndex];
+            jokeMessage.style.display = 'block';
+            nextButton.style.display = 'block';
+        }
+
+        function nextHeart() {
+            jokeMessage.style.display = 'none';
+            nextButton.style.display = 'none';
+            document.querySelectorAll('.sunflower').forEach(sunflower => sunflower.remove());
+
+            currentMessageIndex++;
+            if (currentMessageIndex < messages.length) {
+                bigHeart.style.display = 'block';
+                setTimeout(() => {
+                    bigHeart.style.display = 'none';
+                    showSunflowers();
+                    showJokeMessage();
+                }, 1000);
+            } else {
+                jokeMessage.innerText = "Você chegou ao fim! Obrigada por jogar, meu bem!";
+                jokeMessage.style.display = 'block';
+            }
+        }
+
+        startButton.addEventListener('click', startGame);
+        prizeButton.addEventListener('click', startHeartExplosion);
+        nextButton.addEventListener('click', nextHeart);
+    </script>
+</body>
+</html>
